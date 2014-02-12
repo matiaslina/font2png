@@ -27,6 +27,7 @@ struct options_t{
         double green;
         double blue;
     } color;
+    int fpa;                /* Font Pixel Adjust */
 
     const char *filename;
 };

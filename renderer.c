@@ -42,7 +42,7 @@ static void render_text(cairo_t *cr, int size, struct options_t options);
 static int get_font_size(struct options_t options)
 {
     int result = 0;
-    int size = 0;
+    int size = 1;
     int h = 0, w = 0;
     cairo_t *cr = NULL;
     cairo_surface_t *surface = NULL;
@@ -62,23 +62,47 @@ static int get_font_size(struct options_t options)
     if(options.align)
         pango_layout_set_alignment(layout, _alignment_from_opt(options));
 
-    while(h <= options.height && w <= options.width)
+    /* every size will be aumented by a factor of 2 */
+    desc = pango_font_description_from_string(options.font);
+    while(1)
     {
-
-        desc = pango_font_description_from_string(options.font);
+        /* Create and update the layout */
         pango_font_description_set_size(desc, size * PANGO_SCALE);
-
         pango_layout_set_font_description(layout, desc);
-        
         pango_cairo_update_layout(cr, layout);
+
         pango_layout_get_pixel_size(layout, &w, &h);
+        if(h <= options.height && w <= options.width)
+        {
+            result = size;
+            size = size * 2;
+        }
+        else
+            break;
+    }
+    /* Reached here, we have size = size*2 of what we want. */
+    size = result;
 
-        result = size;
-        size++;
-        pango_font_description_free(desc);
+    /* And now linealy. */
+    while(1)
+    {
+        /* Create and update the  layout */
+        pango_font_description_set_size(desc, size * PANGO_SCALE);
+        pango_layout_set_font_description(layout, desc);
+        pango_cairo_update_layout(cr, layout);
 
+        pango_layout_get_pixel_size(layout, &w, &h);
+        if(h <= options.height && w <= options.width)
+        {
+            result = size;
+            size++;
+        }
+        else
+            break;
     }
     /* Free all */
+    pango_font_description_free(desc);
+
     g_object_unref(layout);
     cairo_destroy(cr);
     cairo_surface_destroy(surface);
@@ -103,8 +127,7 @@ static void render_text(cairo_t *cr, int size, struct options_t options)
         pango_layout_set_alignment(layout, _alignment_from_opt(options));
 
     desc = pango_font_description_from_string(options.font);
-    printf("Font size: %d\n", size);
-    pango_font_description_set_size(desc, (size-5) * PANGO_SCALE);
+    pango_font_description_set_size(desc, (size - options.fpa) * PANGO_SCALE);
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 
@@ -133,8 +156,6 @@ int make_png(struct options_t options)
     cairo_paint(cr);
     
     size = get_font_size(options);
-
-    printf("size: %d \n", size);
 
     render_text(cr, size, options);
 

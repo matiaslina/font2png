@@ -19,6 +19,7 @@ static void show_help(void)
             "-o filename                Output file (required)\n"
             "-a (center|left|right)     alignment\n"
             "-c XXXXXXX                 Color in hexadecimal\n"
+            "-p n                       Pixels that the font is reduced\n"
           );
 }
 static void colors_from_string(char *str, double *r, double *g, double *b)
@@ -38,9 +39,9 @@ static void colors_from_string(char *str, double *r, double *g, double *b)
     sb[1] = str[5];
     sb[2] = '\0';
 
-    sscanf(sr, "%X", &xr);
-    sscanf(sg, "%X", &xg);
-    sscanf(sb, "%X", &xb);
+    sscanf(sr, "%x", &xr);
+    sscanf(sg, "%x", &xg);
+    sscanf(sb, "%x", &xb);
 
     *r =(double) xr/0xFF;
     *g =(double) xg/0xFF;
@@ -60,12 +61,12 @@ int main(int argc, char *argv[])
         .width      = 0,
         .height     = 0,
         .color      = {
-            .red = 0.0f,
-            .green = 0.0f,
-            .blue = 0.0f
-        },            /* Not used */
+            .red    = 0.0f,
+            .green  = 0.0f,
+            .blue   = 0.0f
+        },
+        .fpa        = 0,
         .align      = LEFT_ALIGN,
-        .direction  = LEFT_TO_RIGHT,
     };
 
     if(argc > 1 && (strcmp(argv[1], "--help") == 0))
@@ -74,10 +75,13 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    while((opt = getopt(argc, argv, "f:h:w:o:c:a:t:")) != -1)
+    while((opt = getopt(argc, argv, "f:h:w:o:c:a:t:p:")) != -1)
     {
         switch(opt)
         {
+            case 'p':
+                options.fpa = atoi(optarg);
+                break;
             case 'f':
                 options.font = optarg;
                 break;
@@ -123,7 +127,6 @@ int main(int argc, char *argv[])
                 options.text = optarg;
                 break;
             case 'c':
-                printf("strlen = %lu\nstr = %s", strlen(optarg), optarg);
                 if(strlen(optarg) != 6)
                 {
                     fprintf(stderr, "You need to especify a hexa number with 6 digits\n");
@@ -133,10 +136,6 @@ int main(int argc, char *argv[])
                                    &(options.color.red),
                                    &(options.color.green),
                                    &(options.color.blue));
-                printf("%F %F %F\n", options.color.red,
-                                   options.color.green,
-                                   options.color.blue);
-                break;
             default:
                 break;
         }
