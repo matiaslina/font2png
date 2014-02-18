@@ -116,6 +116,7 @@ static void render_text(cairo_t *cr, int size, struct options_t options)
 {
     PangoLayout *layout;
     PangoFontDescription *desc;
+    int w, h;
 
     layout = pango_cairo_create_layout(cr);
 
@@ -135,6 +136,12 @@ static void render_text(cairo_t *cr, int size, struct options_t options)
                          options.color.green,
                          options.color.blue);
     pango_cairo_update_layout(cr, layout);
+
+    pango_layout_get_pixel_size(layout, &w, &h);
+
+    /* The font is already in horizontal center alignment */
+    /* cairo_move_to(cairo_t *, int x, int y) */
+    cairo_move_to(cr, 0, (options.height/2) - (h/2));
 
     pango_cairo_show_layout(cr, layout);
 
