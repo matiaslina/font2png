@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -6,7 +7,8 @@
 #include "renderer.h"
 
 static void show_help(void);
-static void colors_from_string(char *str, double *r, double *g, double *b);
+static void colors_from_string(char *str, Color *c);
+static void parse_stroke(char *str, Color *c, double *size);
 
 static void show_help(void)
 {
@@ -20,9 +22,10 @@ static void show_help(void)
             "-a (center|left|right)     alignment\n"
             "-c XXXXXXX                 Color in hexadecimal\n"
             "-p n                       Pixels that the font is reduced\n"
+            "-s XXXXXXX:n               Stroke with size n and color XXXXXXX\n"
           );
 }
-static void colors_from_string(char *str, double *r, double *g, double *b)
+static void colors_from_string(char *str, Color *c)
 {
     char sr[3];
     char sg[3];
@@ -43,28 +46,53 @@ static void colors_from_string(char *str, double *r, double *g, double *b)
     sscanf(sg, "%x", &xg);
     sscanf(sb, "%x", &xb);
 
-    *r =(double) xr/0xFF;
-    *g =(double) xg/0xFF;
-    *b =(double) xb/0xFF;
+
+    c->red = (double) xr/0xFF;
+    c->green = (double) xg/0xFF;
+    c->blue = (double) xb/0xFF;
 }
+
+static void parse_stroke(char *str, Color *c, double *size)
+{
+    char *hexcode;
+
+    hexcode = malloc(7*sizeof(char));
+
+    /* The first 6 digits of str are the hexadecimal number of
+     * the color. */
+    hexcode = strncpy(hexcode, str, 6);
+    colors_from_string(hexcode, c);
+
+    /* And the rest is the size of the stroke */
+    *size = atof(&(str[7]));
+}
+
 
 int main(int argc, char *argv[])
 {
     int opt;
-
+    char *text = NULL;
+    char *buffer = calloc(256, sizeof(char));
+    size_t text_len = 0;
+    ssize_t count;
     opterr= 0;
-
     struct options_t options = {
         .text       = NULL,
         .font       = "Arial",
         .filename   = NULL,
         .width      = 0,
         .height     = 0,
-        .color      = {
+        .text_color = {
             .red    = 0.0f,
             .green  = 0.0f,
             .blue   = 0.0f
         },
+        .stroke_color = {
+            .red    = 0.0f,
+            .green  = 0.0f,
+            .blue   = 0.0f
+        },
+        .stroke_size = 0.0,
         .fpa        = 0,
         .align      = LEFT_ALIGN,
     };
@@ -75,7 +103,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    while((opt = getopt(argc, argv, "f:h:w:o:c:a:t:p:")) != -1)
+    while((opt = getopt(argc, argv, "f:h:w:o:c:a:p:s:")) != -1)
     {
         switch(opt)
         {
@@ -110,7 +138,6 @@ int main(int argc, char *argv[])
             case 'a':
                 if(strcmp(optarg, "right") == 0)
                     options.align = RIGHT_ALIGN;
-
                 else if(strcmp(optarg, "left") == 0)
                     options.align = LEFT_ALIGN;
                 else if(strcmp(optarg, "center") == 0)
@@ -118,13 +145,9 @@ int main(int argc, char *argv[])
                 else
                 {
                     fprintf(stderr, "Unknown option for -a. You should try"
-                                    "with 'left', 'right' or 'center'"
-                           );
-                    return -2;
+                                    "with 'left', 'right' or 'center'");
+                    options.align = NONE_ALIGN;
                 }
-                break;
-            case 't':
-                options.text = optarg;
                 break;
             case 'c':
                 if(strlen(optarg) != 6)
@@ -132,23 +155,56 @@ int main(int argc, char *argv[])
                     fprintf(stderr, "You need to especify a hexa number with 6 digits\n");
                     return -4;
                 }
-                colors_from_string(optarg,
-                                   &(options.color.red),
-                                   &(options.color.green),
-                                   &(options.color.blue));
+                colors_from_string(optarg, &(options.text_color));
+                break;
+            case 's':
+                if(strlen(optarg) < 5)
+                {
+                    fprintf(stderr, "There's some error with the stroke syntax\n");
+                    return -5;
+                }
+                parse_stroke(optarg, &(options.stroke_color), &(options.stroke_size));
+                if(options.stroke_size == 0.0)
+                {
+                    fprintf(stderr, "Failed to parse the stroke size\n");
+                    return -6;
+                }
+                break;
             default:
                 break;
         }
     }
 
     if(options.width <= 0 || options.height <= 0 ||
-       options.filename == NULL || options.text == NULL)
+       options.filename == NULL)
     {
         fprintf(stderr, "You're forgoting a parameter!");
         return -3;
     }
 
+    /* Get the text from stdin */
+    while((count = read(STDIN_FILENO, buffer, 256)) > 0)
+    {
+        text = realloc(text, text_len + count);
+        text = strncat(text, buffer, count);
+        text_len += count;
+    }
+
+    text = realloc(text, text_len + 1);
+    text[text_len] = '\0';
+
+    if(count == -1)
+    {
+        fprintf(stderr, "Failed to read()");
+        return -7;
+    }
+
+    options.text = text;
+
     make_png(options);
+
+    free(text);
+    free(buffer);
     
     return 0;
 }

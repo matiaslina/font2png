@@ -7,11 +7,19 @@ typedef enum {
 } TextDirection;
 
 typedef enum {
+    NONE_ALIGN = 0,
     RIGHT_ALIGN,
     LEFT_ALIGN,
     CENTER_ALIGN,
     JUSTIFIED,
 } TextAlign;
+
+typedef struct _color {
+    double red;
+    double green;
+    double blue;
+} Color;
+
 
 struct options_t{
     char *text;
@@ -22,12 +30,12 @@ struct options_t{
 
     TextAlign align;
     TextDirection direction;
-    struct {
-        double red;
-        double green;
-        double blue;
-    } color;
     int fpa;                /* Font Pixel Adjust */
+    Color text_color;
+
+    /* Stroke */
+    Color stroke_color;
+    double stroke_size;
 
     const char *filename;
 };

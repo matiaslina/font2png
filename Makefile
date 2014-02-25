@@ -1,7 +1,7 @@
-CC=clang
+CC=gcc
 TARGET=font2png
 
-CFLAGS=-Wall -Werror -Wextra -O3 -g \
+CFLAGS=-Wall -Werror -Wextra -O0 -g \
 	   `pkg-config --cflags pangocairo`
 LDFLAGS=`pkg-config --libs pangocairo`
 
