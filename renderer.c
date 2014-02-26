@@ -71,6 +71,7 @@ get_font_size(struct options_t options)
     int result = 1;
     int size = 1;
     int h = 0, w = 0;
+    double x1, x2, y1, y2;
     cairo_t *cr = NULL;
     cairo_surface_t *surface = NULL;
     PangoLayout *layout = NULL;
@@ -92,8 +93,12 @@ get_font_size(struct options_t options)
         pango_font_description_set_size(desc, size * PANGO_SCALE);
         pango_layout_set_font_description(layout, desc);
         pango_cairo_update_layout(cr, layout);
+        pango_cairo_layout_path(cr, layout);
 
-        pango_layout_get_pixel_size(layout, &w, &h);
+        /* Get the extents of the draw area. */
+        cairo_path_extents(cr, &x1, &y1, &x2, &y2);
+        h = (int) y2 - y1;
+        w = (int) x2 - x1;
         if(h <= options.height && w <= options.width)
         {
             result = size;
@@ -112,8 +117,12 @@ get_font_size(struct options_t options)
         pango_font_description_set_size(desc, size * PANGO_SCALE);
         pango_layout_set_font_description(layout, desc);
         pango_cairo_update_layout(cr, layout);
+        pango_cairo_layout_path(cr, layout);
 
-        pango_layout_get_pixel_size(layout, &w, &h);
+        cairo_path_extents(cr, &x1, &y1, &x2, &y2);
+        h = (int) y2 - y1;
+        w = (int) x2 - x1;
+
         if(h <= options.height && w <= options.width)
         {
             result = size;
