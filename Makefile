@@ -1,4 +1,4 @@
-CC=gcc
+CC=clang
 TARGET=font2png
 
 CFLAGS=-Wall -Werror -Wextra -O0 -g \
