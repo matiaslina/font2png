@@ -6,12 +6,12 @@
 
 #include "renderer.h"
 
-#define FONT        "Traditional Arabic"
-#define SHORT_TEXT  "Hello world\0"
-#define LONG_TEXT   "Hello my dear world, how are you? Hope that fine.\0"
-#define ARABIC_TEXT "شيء يحشر السوبر المخادع"
-
-#define b2s(x)      (x)?"true":"false"
+#ifndef MAX
+#define MAX(a,b) (a>b)?a:b
+#endif
+#ifndef MIN
+#define MIN(a,b) (a<b)?a:b
+#endif
 
 /* Helpers */
 #if 0
@@ -28,8 +28,8 @@ static void increment_layout_size(cairo_t *cr, PangoLayout *layout,
 static gboolean wrap_is_well_formed(PangoLayout *layout, const gchar *cmpstr);
 
 /* Private functions */
-static int get_font_size(struct options_t options);
-static void render_text(cairo_t *cr, int size, struct options_t options);
+static gulong get_font_size(struct options_t options);
+static void render_text(cairo_t *cr, gulong size, struct options_t options);
 
 /**********************************************/
 
@@ -151,11 +151,11 @@ increment_layout_size(cairo_t *cr, PangoLayout *layout,
     pango_cairo_update_layout(cr, layout);
 }
 
-static int
+static gulong 
 get_font_size(struct options_t options)
 {
     int result = 1;
-    int size = 1;
+    gulong size = 1;
     int h = 0, w = 0;
     const gchar *last_line_str;
     cairo_t *cr = NULL;
@@ -221,7 +221,7 @@ get_font_size(struct options_t options)
 }
 
     static void
-render_text(cairo_t *cr, int size, struct options_t options)
+render_text(cairo_t *cr, gulong size, struct options_t options)
 {
     PangoLayout *layout;
     PangoFontDescription *description;
@@ -269,7 +269,7 @@ render_text(cairo_t *cr, int size, struct options_t options)
 int
 make_png(struct options_t options)
 {
-    int size = 0;
+    gulong size = 0;
     cairo_t *cr = NULL;
     cairo_surface_t *surface = NULL;
     cairo_status_t status;

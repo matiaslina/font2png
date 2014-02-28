@@ -70,11 +70,11 @@ static void parse_stroke(char *str, Color *c, double *size)
 
 int main(int argc, char *argv[])
 {
-    int opt;
+    int opt = 0;
     char *text = NULL;
     char *buffer = calloc(256, sizeof(char));
     size_t text_len = 0;
-    ssize_t count;
+    ssize_t count = 0;
     opterr= 0;
     struct options_t options = {
         .text       = NULL,
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
         switch(opt)
         {
             case 'p':
-                options.fpa = atoi(optarg);
+                options.fpa = 0;
                 break;
             case 'f':
                 options.font = optarg;
@@ -185,13 +185,11 @@ int main(int argc, char *argv[])
     /* Get the text from stdin */
     while((count = read(STDIN_FILENO, buffer, 256)) > 0)
     {
-        text = realloc(text, text_len + count);
+        text = realloc(text, text_len + count + 1);
+        memset(text+text_len, 0, count +1);
         text = strncat(text, buffer, count);
         text_len += count;
     }
-
-    text = realloc(text, text_len + 1);
-    text[text_len] = '\0';
 
     if(count == -1)
     {
