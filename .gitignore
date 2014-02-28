@@ -2,4 +2,4 @@
 *.png
 .depend
 font2png
-*.pyc
+*.log
