@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
         switch(opt)
         {
             case 'p':
-                options.fpa = 0;
+                options.fpa = atoi(optarg);
                 break;
             case 'f':
                 options.font = optarg;
