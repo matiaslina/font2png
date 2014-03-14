@@ -14,9 +14,6 @@
 #endif
 
 /* Helpers */
-#if 0
-static void dump_layout_lines(PangoLayout *layout);
-#endif
 static const gchar *get_last_line_text(PangoLayout *layout);
 
 /* Pango/Cairo helpers */
@@ -32,36 +29,6 @@ static gulong get_font_size(struct options_t options);
 static void render_text(cairo_t *cr, gulong size, struct options_t options);
 
 /**********************************************/
-
-#if 0
-static void 
-dump_layout_lines(PangoLayout *layout)
-{
-    GSList *lines, *list;
-    PangoLayoutLine *line;
-    const gchar *text;
-    gchar *line_text;
-    gulong offset = 0;
-
-    lines = pango_layout_get_lines_readonly(layout);
-    text = pango_layout_get_text(layout);
-
-    /* At least we have one line */
-    line_text = calloc(strlen(text), sizeof(gchar));
-
-    for (list = lines; list; list = list->next)
-    {
-        line = (PangoLayoutLine *) list->data;
-        line_text = strncpy(line_text, text+offset, line->length);
-        line_text[line->length] = '\0';
-        printf("(%lu): %s | ", offset, line_text);
-        
-        offset += line->length+1;
-    }
-    printf("\n");
-    free(line_text);
-}
-#endif
 
 static const gchar *
 get_last_line_text(PangoLayout *layout)
@@ -129,7 +96,8 @@ _alignment_from_opt(struct options_t options)
 static PangoLayout *
 config_layout(PangoLayout *layout, struct options_t options)
 {
-    pango_layout_set_text(layout, options.text, strlen(options.text));
+    //pango_layout_set_text(layout, options.text, strlen(options.text));
+    pango_layout_set_markup(layout, options.text, -1);
     pango_layout_set_width(layout, options.width * PANGO_SCALE);
     pango_layout_set_height(layout, options.height * PANGO_SCALE);
     pango_layout_set_wrap(layout, PANGO_WRAP_WORD);
@@ -220,7 +188,7 @@ get_font_size(struct options_t options)
     return (result);
 }
 
-    static void
+static void
 render_text(cairo_t *cr, gulong size, struct options_t options)
 {
     PangoLayout *layout;
