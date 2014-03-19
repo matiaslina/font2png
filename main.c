@@ -70,7 +70,7 @@ static void parse_stroke(char *str, Color *c, double *size)
 
 int main(int argc, char *argv[])
 {
-    int opt = 0;
+    int opt = 0, size = 0;
     char *text = NULL;
     char *buffer = calloc(256, sizeof(char));
     size_t text_len = 0;
@@ -109,6 +109,11 @@ int main(int argc, char *argv[])
         {
             case 'p':
                 options.fpa = atoi(optarg);
+                if(options.fpa > 100 || options.fpa < 0)
+                {
+                    fprintf(stderr, "padding must be inside [0,100). Passed %d\n", options.fpa);
+                    return -6;
+                }
                 break;
             case 'f':
                 options.font = optarg;
@@ -199,10 +204,18 @@ int main(int argc, char *argv[])
 
     options.text = text;
 
-    make_png(options);
+    size = make_png(options);
 
     free(text);
     free(buffer);
+
+    /* Exits with a status of cairo defined
+     * in http://cairographics.org/manual/cairo-PNG-Support.html#cairo-surface-write-to-png
+     */
+    if(size <= 0)
+        return size;
+
+    printf("%d\n", size);
     
     return 0;
 }

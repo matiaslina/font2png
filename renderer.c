@@ -19,14 +19,14 @@ static const gchar *get_last_line_text(PangoLayout *layout);
 /* Pango/Cairo helpers */
 static PangoAlignment _alignment_from_opt(struct options_t options);
 static PangoLayout *config_layout(PangoLayout *layout, struct options_t options);
-static void increment_layout_size(cairo_t *cr, PangoLayout *layout,
+static void update_layout_size(cairo_t *cr, PangoLayout *layout,
                                   PangoFontDescription *desc,
                                   int size);
 static gboolean wrap_is_well_formed(PangoLayout *layout, const gchar *cmpstr);
 
 /* Private functions */
 static gulong get_font_size(struct options_t options);
-static void render_text(cairo_t *cr, gulong size, struct options_t options);
+static gulong render_text(cairo_t *cr, gulong size, struct options_t options);
 
 /**********************************************/
 
@@ -85,6 +85,7 @@ _alignment_from_opt(struct options_t options)
                 fprintf(stderr, "_alignment_from_opt() undefined or none align option: %d",
                         options.align);
                 result = PANGO_ALIGN_LEFT;
+                break;
         }
     }
 
@@ -96,7 +97,6 @@ _alignment_from_opt(struct options_t options)
 static PangoLayout *
 config_layout(PangoLayout *layout, struct options_t options)
 {
-    //pango_layout_set_text(layout, options.text, strlen(options.text));
     pango_layout_set_markup(layout, options.text, -1);
     pango_layout_set_width(layout, options.width * PANGO_SCALE);
     pango_layout_set_height(layout, options.height * PANGO_SCALE);
@@ -109,7 +109,7 @@ config_layout(PangoLayout *layout, struct options_t options)
 }
 
 static void
-increment_layout_size(cairo_t *cr, PangoLayout *layout,
+update_layout_size(cairo_t *cr, PangoLayout *layout,
                       PangoFontDescription *desc,
                       int size)
 {
@@ -142,10 +142,9 @@ get_font_size(struct options_t options)
 
     last_line_str = get_last_line_text(layout);
 
-
     while(1)
     {
-        increment_layout_size(cr, layout, desc, size);
+        update_layout_size(cr, layout, desc, size);
         pango_layout_get_pixel_size(layout, &w, &h);
         if(!wrap_is_well_formed(layout, last_line_str))
         {
@@ -164,7 +163,7 @@ get_font_size(struct options_t options)
     /* And now linealy. */
     while(1)
     {
-        increment_layout_size(cr, layout, desc, size);
+        update_layout_size(cr, layout, desc, size);
         pango_layout_get_pixel_size(layout, &w, &h);
 
         if(!wrap_is_well_formed(layout, last_line_str))
@@ -188,22 +187,26 @@ get_font_size(struct options_t options)
     return (result);
 }
 
-static void
+static gulong 
 render_text(cairo_t *cr, gulong size, struct options_t options)
 {
     PangoLayout *layout;
     PangoFontDescription *description;
     int w, h;
+    guint fix_size = 0;
 
     /* Create layout from a cairo context */
     layout = pango_cairo_create_layout(cr);
 
     layout = config_layout(layout, options);
-    /* Add the font description passed by parameter (for example: `Droid Sans Mono`) */
+    /* Add the font description passed by parameter
+     * (for example: `Droid Sans Mono`) */
     description = pango_font_description_from_string(options.font);
 
-    pango_font_description_set_size(description, (size - options.fpa) * PANGO_SCALE);
-
+    /* Set the size with a percent of the size */
+    fix_size = size - (size * ((gfloat)options.fpa/100));
+    pango_font_description_set_size(description,
+                                    PANGO_SCALE*(fix_size));
     pango_layout_set_font_description(layout, description);
     pango_font_description_free(description);
 
@@ -219,19 +222,24 @@ render_text(cairo_t *cr, gulong size, struct options_t options)
     /* And set the path of the fonts. */
     pango_cairo_layout_path(cr, layout);
 
+
+    /* fill the context */
+    cairo_set_source_rgb(cr, options.text_color.red,
+            options.text_color.green,
+            options.text_color.blue);
+    /* Preserve the fill to stroke it after */
+    cairo_fill_preserve(cr);
+
+    /* Draw the stroke */
     cairo_set_line_width(cr, options.stroke_size);
     cairo_set_source_rgb(cr,
             options.stroke_color.red,
             options.stroke_color.green,
             options.stroke_color.blue);
-    cairo_stroke_preserve(cr);
-
-    cairo_set_source_rgb(cr, options.text_color.red,
-            options.text_color.green,
-            options.text_color.blue);
-    cairo_fill(cr);
+    cairo_stroke(cr);
 
     g_object_unref(layout);
+    return fix_size;
 }
 
 int
@@ -246,16 +254,21 @@ make_png(struct options_t options)
             options.width,
             options.height);
     cr = cairo_create(surface);
-    cairo_set_source_rgba(cr, 0.0,0.0,0.0, 0.0);
+
+    /* Transparent background */
+    cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, 0.0);
     cairo_paint(cr);
 
     size = get_font_size(options);
 
-    render_text(cr, size, options);
+    size = render_text(cr, size, options);
 
     cairo_destroy(cr);
     status = cairo_surface_write_to_png(surface, options.filename);
     cairo_surface_destroy(surface);
 
-    return status;
+    if(status > 0)
+        return -status;
+
+    return size;
 }
