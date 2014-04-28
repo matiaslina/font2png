@@ -16,13 +16,13 @@ static void show_help(void)
             "--help                     Print this help\n"
             "-w n                       Width of n pixels\n"
             "-h n                       Height of n pixels\n"
-            "-t str                     Input text\n"
             "-f font                    Font to render\n"
             "-o filename                Output file (required)\n"
-            "-a (center|left|right)     alignment\n"
+            "-a (center|left|right)     horizontal alignment\n"
+            "-v (center|top|bottom)     vertical alignment\n"
             "-c XXXXXXX                 Color in hexadecimal\n"
-            "-p n                       Pixels that the font is reduced\n"
             "-s XXXXXXX:n               Stroke with size n and color XXXXXXX\n"
+            "-p n                       Pixels that the font is reduced\n"
           );
 }
 static void colors_from_string(char *str, Color *c)
@@ -31,7 +31,7 @@ static void colors_from_string(char *str, Color *c)
     char sg[3];
     char sb[3];
     unsigned int xr,xg,xb;
-    
+
     sr[0] = str[0];
     sr[1] = str[1];
     sr[2] = '\0';
@@ -95,6 +95,7 @@ int main(int argc, char *argv[])
         .stroke_size = 0.0,
         .fpa        = 0,
         .align      = LEFT_ALIGN,
+        .valign     = CENTER_ALIGN
     };
 
     if(argc > 1 && (strcmp(argv[1], "--help") == 0))
@@ -103,7 +104,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    while((opt = getopt(argc, argv, "f:h:w:o:c:a:p:s:")) != -1)
+    while((opt = getopt(argc, argv, "f:h:w:o:c:a:p:s:v:")) != -1)
     {
         switch(opt)
         {
@@ -127,19 +128,6 @@ int main(int argc, char *argv[])
             case 'o':
                 options.filename = (const char *) optarg;
                 break;
-            case 'd':
-                if(strcmp(optarg, "left") == 0)
-                    options.direction = LEFT_TO_RIGHT;
-                else if(strcmp(optarg, "right") == 0)
-                    options.direction = RIGHT_TO_LEFT;
-                else
-                {
-                    fprintf(stderr, "Unknown option for -d. You should try"
-                                    "with 'left' or 'right'"
-                           );
-                    return -1;
-                }
-                break;
             case 'a':
                 if(strcmp(optarg, "right") == 0)
                     options.align = RIGHT_ALIGN;
@@ -153,6 +141,15 @@ int main(int argc, char *argv[])
                                     "with 'left', 'right' or 'center'");
                     options.align = NONE_ALIGN;
                 }
+                break;
+            case 'v':
+                /* The default align is center */
+                if(strcmp(optarg, "top") == 0)
+                    options.valign = TOP_ALIGN;
+                else if(strcmp(optarg, "bottom") == 0)
+                    options.valign = BOTTOM_ALIGN;
+                else
+                    options.valign = CENTER_ALIGN;
                 break;
             case 'c':
                 if(strlen(optarg) != 6)
@@ -216,6 +213,6 @@ int main(int argc, char *argv[])
         return size;
 
     printf("%d\n", size);
-    
+
     return 0;
 }

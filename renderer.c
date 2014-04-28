@@ -1,10 +1,10 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pango/pangocairo.h>
 #include <string.h>
 
 #include "renderer.h"
+#include "info.h"
 
 #ifndef MAX
 #define MAX(a,b) (a>b)?a:b
@@ -13,24 +13,20 @@
 #define MIN(a,b) (a<b)?a:b
 #endif
 
-/* Helpers */
-static const gchar *get_last_line_text(PangoLayout *layout);
-
-/* Pango/Cairo helpers */
+/* Pango helpers */
 static PangoAlignment _alignment_from_opt(struct options_t options);
-static PangoLayout *config_layout(PangoLayout *layout, struct options_t options);
-static void update_layout_size(cairo_t *cr, PangoLayout *layout,
-                                  PangoFontDescription *desc,
-                                  int size);
-static gboolean wrap_is_well_formed(PangoLayout *layout, const gchar *cmpstr);
+
+/* Cairo helpers */
+static void resize_cairo_ctx(cairo_t *ctx, PangoLayout *layout);
+static void move_cairo_ctx(cairo_t *ctx, struct options_t options,
+                           int height);
 
 /* Private functions */
-static gulong get_font_size(struct options_t options);
 static gulong render_text(cairo_t *cr, gulong size, struct options_t options);
 
 /**********************************************/
 
-static const gchar *
+const gchar *
 get_last_line_text(PangoLayout *layout)
 {
     GSList *last_line;
@@ -40,14 +36,14 @@ get_last_line_text(PangoLayout *layout)
 
     last_line = g_slist_last(pango_layout_get_lines_readonly(layout));
     line = (PangoLayoutLine *) last_line->data;
-    
+
     offset = line->start_index;
     text = pango_layout_get_text(layout);
 
     return ((const gchar *) text+offset);
 }
 
-static gboolean
+gboolean
 wrap_is_well_formed(PangoLayout *layout, const gchar *cmpstr)
 {
     const gchar *text;
@@ -94,7 +90,7 @@ _alignment_from_opt(struct options_t options)
     return (PangoAlignment) result;
 }
 
-static PangoLayout *
+PangoLayout *
 config_layout(PangoLayout *layout, struct options_t options)
 {
     pango_layout_set_markup(layout, options.text, -1);
@@ -108,7 +104,7 @@ config_layout(PangoLayout *layout, struct options_t options)
     return layout;
 }
 
-static void
+void
 update_layout_size(cairo_t *cr, PangoLayout *layout,
                       PangoFontDescription *desc,
                       int size)
@@ -119,73 +115,31 @@ update_layout_size(cairo_t *cr, PangoLayout *layout,
     pango_cairo_update_layout(cr, layout);
 }
 
-static gulong 
-get_font_size(struct options_t options)
+static void resize_cairo_ctx(cairo_t *ctx, PangoLayout *layout)
 {
-    int result = 1;
-    gulong size = 1;
-    int h = 0, w = 0;
-    const gchar *last_line_str;
-    cairo_t *cr = NULL;
-    cairo_surface_t *surface = NULL;
-    PangoLayout *layout = NULL;
-    PangoFontDescription *desc = NULL;
+    double x1, x2, y1, y2;
+    int pango_width, pango_height;
 
-    surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
-            options.width,
-            options.height);
-    cr = cairo_create(surface);
-    layout = pango_cairo_create_layout(cr);
+    pango_layout_get_pixel_size(layout, &pango_width, &pango_height);
+    pango_cairo_layout_path(ctx, layout);
+    cairo_path_extents(ctx, &x1, &y1, &x2, &y2);
 
-    layout = config_layout(layout, options);
-    desc = pango_font_description_from_string(options.font);
-
-    last_line_str = get_last_line_text(layout);
-
-    while(1)
-    {
-        update_layout_size(cr, layout, desc, size);
-        pango_layout_get_pixel_size(layout, &w, &h);
-        if(!wrap_is_well_formed(layout, last_line_str))
-        {
-            size--;
-            break;
-        }
-
-        if(h >= options.height || w >= options.width)
-            break;
-        result = size;
-        size = size * 2;
-    }
-    /* Reached here, we have size = size*2 of what we want. */
-    size = result;
-
-    /* And now linealy. */
-    while(1)
-    {
-        update_layout_size(cr, layout, desc, size);
-        pango_layout_get_pixel_size(layout, &w, &h);
-
-        if(!wrap_is_well_formed(layout, last_line_str))
-        {
-            size--;
-            break;
-        }
-
-        if(h >= options.height || w >= options.width)
-            break;
-        result = size;
-        size++;
-    }
-
-    pango_font_description_free(desc);
-
-    g_object_unref(layout);
-    cairo_destroy(cr);
-    cairo_surface_destroy(surface);
-
-    return (result);
+    /*printf("%f x %f\n", pango_width/(x2-x1),pango_width/(x2-x1));*/
+    /*cairo_scale(ctx, pango_width/(x2-x1),pango_width/(x2-x1));*/
 }
+
+static void move_cairo_ctx(cairo_t *ctx, struct options_t options,
+                           int height)
+{
+    if(options.valign == CENTER_ALIGN)
+        cairo_move_to(ctx, 0, (options.height/2) - (height/2));
+    else if(options.valign == BOTTOM_ALIGN)
+        cairo_move_to(ctx, 0, (options.height - height));
+
+}
+
+/*****************************************************/
+
 
 static gulong 
 render_text(cairo_t *cr, gulong size, struct options_t options)
@@ -212,16 +166,25 @@ render_text(cairo_t *cr, gulong size, struct options_t options)
 
     /* Get the size of the text in pixels */
     pango_layout_get_pixel_size(layout, &w, &h);
+    /*printf("pango_layout_get_pixel_size (%d x %d)\n", w, h);*/
 
-    /* Center vertically */
-    cairo_move_to(cr, 0, (options.height/2) - (h/2));
+    /* Center vertically and check if we are out of the bounds of the surface */
+    /* void cairo_scale(cairo_t *cr, double sx, double sy);*/
+    /* Check alignment */
 
+    move_cairo_ctx(cr, options, h);
+    resize_cairo_ctx(cr, layout);
 
-    /* Update cairo with the layout */
-    cairo_set_source_rgb(cr,0.0,0.0,0.0);
-    /* And set the path of the fonts. */
+    /* Set surface to translucent color (r, g, b, a) without disturbing graphics state. */
+    cairo_save (cr);
+    cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, 0.0);
+    cairo_paint (cr);
+    cairo_restore (cr);
+
+    /* Paint everything transparent */
+
+    cairo_save(cr);
     pango_cairo_layout_path(cr, layout);
-
 
     /* fill the context */
     cairo_set_source_rgb(cr, options.text_color.red,
@@ -231,15 +194,17 @@ render_text(cairo_t *cr, gulong size, struct options_t options)
     cairo_fill_preserve(cr);
 
     /* Draw the stroke */
+    fix_size = size * ((gfloat)options.stroke_size/100);
     cairo_set_line_width(cr, options.stroke_size);
     cairo_set_source_rgb(cr,
             options.stroke_color.red,
             options.stroke_color.green,
             options.stroke_color.blue);
     cairo_stroke(cr);
+    cairo_restore(cr);
 
     g_object_unref(layout);
-    return fix_size;
+    return size - (size * ((gfloat)options.fpa/100));
 }
 
 int

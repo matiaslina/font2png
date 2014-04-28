@@ -1,45 +1,17 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
-typedef enum {
-    LEFT_TO_RIGHT,
-    RIGHT_TO_LEFT,
-} TextDirection;
+#include <pango/pangocairo.h>
+#include "defs.h"
 
-typedef enum {
-    NONE_ALIGN = 0,
-    RIGHT_ALIGN,
-    LEFT_ALIGN,
-    CENTER_ALIGN,
-    JUSTIFIED,
-} TextAlign;
+/* Helpers */
+const gchar *get_last_line_text(PangoLayout *layout);
 
-typedef struct _color {
-    double red;
-    double green;
-    double blue;
-} Color;
-
-
-struct options_t{
-    char *text;
-    char *font;
-
-    int width;
-    int height;
-
-    TextAlign align;
-    TextDirection direction;
-    int fpa;                /* Font Pixel Adjust */
-    Color text_color;
-
-    /* Stroke */
-    Color stroke_color;
-    double stroke_size;
-
-    const char *filename;
-};
-
+PangoLayout *config_layout(PangoLayout *layout, struct options_t options);
+void update_layout_size(cairo_t *cr, PangoLayout *layout,
+                        PangoFontDescription *desc,
+                        int size);
+gboolean wrap_is_well_formed(PangoLayout *layout, const gchar *cmpstr);
 
 int make_png(struct options_t options);
 

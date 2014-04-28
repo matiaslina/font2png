@@ -1,8 +1,10 @@
 CC=clang
 TARGET=font2png
 
-CFLAGS=-Wall -Werror -Wextra -O0 \
-	   `pkg-config --cflags pangocairo`
+CFLAGS=-Wall -Werror -Wextra -O3 \
+	   `pkg-config --cflags pangocairo` \
+	   -Wunreachable-code -Wstrict-prototypes -Wmissing-prototypes \
+	   -Wshadow
 LDFLAGS=`pkg-config --libs pangocairo`
 
 SOURCES=$(shell echo *.c)
