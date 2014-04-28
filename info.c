@@ -31,7 +31,7 @@ get_metrics(struct options_t options)
     cairo_surface_t *surface = NULL;
     PangoLayout *layout = NULL;
     PangoFontDescription *desc = NULL;
-    struct metrics_t metrics;
+    struct metrics_t metrics = { 0, 0, 0};
 
     surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
             options.width,
@@ -79,7 +79,6 @@ get_metrics(struct options_t options)
         result = size;
         size++;
     }
-    metrics = ((struct metrics_t) {h, w, result});
 
     pango_font_description_free(desc);
 

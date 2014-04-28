@@ -1,7 +1,7 @@
 CC=clang
 TARGET=font2png
 
-CFLAGS=-Wall -Werror -Wextra -O3 \
+CFLAGS=-Wall -Werror -Wextra -O0 -g \
 	   `pkg-config --cflags pangocairo` \
 	   -Wunreachable-code -Wstrict-prototypes -Wmissing-prototypes \
 	   -Wshadow

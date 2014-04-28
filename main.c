@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "defs.h"
+#include "info.h"
 #include "renderer.h"
 
 static void show_help(void);
@@ -70,7 +72,9 @@ static void parse_stroke(char *str, Color *c, double *size)
 
 int main(int argc, char *argv[])
 {
-    int opt = 0, size = 0;
+    /* Check if we need to process the image or not */
+    int process = 1;
+    int opt = 0, result = 0;
     char *text = NULL;
     char *buffer = calloc(256, sizeof(char));
     size_t text_len = 0;
@@ -104,10 +108,13 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    while((opt = getopt(argc, argv, "f:h:w:o:c:a:p:s:v:")) != -1)
+    while((opt = getopt(argc, argv, "xf:h:w:o:c:a:p:s:v:")) != -1)
     {
         switch(opt)
         {
+            case 'x':
+                process = 0;
+                break;
             case 'p':
                 options.fpa = atoi(optarg);
                 if(options.fpa > 100 || options.fpa < 0)
@@ -177,10 +184,14 @@ int main(int argc, char *argv[])
         }
     }
 
-    if(options.width <= 0 || options.height <= 0 ||
-       options.filename == NULL)
+    if(options.width <= 0 || options.height <= 0)
     {
-        fprintf(stderr, "You're forgoting a parameter!");
+        fprintf(stderr, "You're forgoting a size parameter!");
+        return -3;
+    }
+    if(options.filename == NULL && process)
+    {
+        fprintf(stderr, "You're forgoting the filename parameter!");
         return -3;
     }
 
@@ -201,7 +212,10 @@ int main(int argc, char *argv[])
 
     options.text = text;
 
-    size = make_png(options);
+    if(process)
+        result = make_png(options);
+    else
+        print_font_data(options);
 
     free(text);
     free(buffer);
@@ -209,10 +223,10 @@ int main(int argc, char *argv[])
     /* Exits with a status of cairo defined
      * in http://cairographics.org/manual/cairo-PNG-Support.html#cairo-surface-write-to-png
      */
-    if(size <= 0)
-        return size;
+    if(result <= 0)
+        return result;
 
-    printf("%d\n", size);
+    printf("%d\n", result);
 
     return 0;
 }
